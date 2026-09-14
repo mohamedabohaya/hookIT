@@ -161,6 +161,41 @@ class GameOverOverlay extends StatelessWidget {
               },
             ),
             const SizedBox(height: 28),
+            ValueListenableBuilder<int>(
+              valueListenable: game.heartBalance,
+              builder: (context, hearts, _) {
+                if (hearts <= 0) return const SizedBox.shrink();
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: game.continueWithHeart,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFFF5C7A),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(28),
+                        ),
+                        elevation: 6,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text('❤️', style: TextStyle(fontSize: 17)),
+                          const SizedBox(width: 8),
+                          Text(
+                            'CONTINUE ($hearts LEFT)',
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, letterSpacing: 1),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
             ValueListenableBuilder<GameMode>(
               valueListenable: game.mode,
               builder: (context, mode, _) {

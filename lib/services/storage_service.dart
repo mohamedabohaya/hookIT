@@ -16,6 +16,7 @@ class StorageService {
   static const _streakLastClaimKey = 'hook_it_streak_last_claim';
   static const _dailyChallengeKey = 'hook_it_daily_challenge';
   static const _dailySpinLastDateKey = 'hook_it_daily_spin_last_date';
+  static const _heartBalanceKey = 'hook_it_heart_balance';
 
   Future<int> loadBestDistance() async {
     final prefs = await SharedPreferences.getInstance();
@@ -152,5 +153,16 @@ class StorageService {
   Future<void> saveDailySpinLastDate(String date) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_dailySpinLastDateKey, date);
+  }
+
+  /// Spare lives the player can spend to continue a run after dying.
+  Future<int> loadHeartBalance() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_heartBalanceKey) ?? 0;
+  }
+
+  Future<void> saveHeartBalance(int total) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_heartBalanceKey, total);
   }
 }

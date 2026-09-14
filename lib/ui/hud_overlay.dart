@@ -103,30 +103,56 @@ class _HudOverlayState extends State<HudOverlay> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    ValueListenableBuilder<GameMode>(
-                      valueListenable: game.mode,
-                      builder: (context, mode, _) => ValueListenableBuilder<int>(
-                        valueListenable: game.coins,
-                        builder: (context, coins, _) => _Pill(
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Text('🪙', style: TextStyle(fontSize: 16)),
-                              const SizedBox(width: 6),
-                              Text(
-                                mode == GameMode.coins
-                                    ? '$coins / ${game.currentCoinTarget}'
-                                    : '$coins',
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.white,
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ValueListenableBuilder<int>(
+                          valueListenable: game.heartBalance,
+                          builder: (context, hearts, _) => _Pill(
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text('❤️', style: TextStyle(fontSize: 15)),
+                                const SizedBox(width: 5),
+                                Text(
+                                  '$hearts',
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.white,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
-                      ),
+                        const SizedBox(width: 8),
+                        ValueListenableBuilder<GameMode>(
+                          valueListenable: game.mode,
+                          builder: (context, mode, _) => ValueListenableBuilder<int>(
+                            valueListenable: game.coins,
+                            builder: (context, coins, _) => _Pill(
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text('🪙', style: TextStyle(fontSize: 16)),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    mode == GameMode.coins
+                                        ? '$coins / ${game.currentCoinTarget}'
+                                        : '$coins',
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 4),
                     ValueListenableBuilder<GameMode>(

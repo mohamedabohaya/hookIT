@@ -16,6 +16,7 @@ import 'daily_content.dart';
 import 'despawnable.dart';
 import 'effects.dart';
 import 'game_status.dart';
+import 'heart.dart';
 import 'level_generator.dart';
 import 'levels.dart';
 import 'obstacle.dart';
@@ -158,6 +159,15 @@ class HookItGame extends FlameGame with PanDetector {
   final ValueNotifier<bool> spinAvailableToday = ValueNotifier(false);
   String? _spinLastDate;
 
+  /// Spare lives the player can spend to continue a run right where it
+  /// ended — collected as [Heart] pickups or bought in the Store.
+  final ValueNotifier<int> heartBalance = ValueNotifier(0);
+
+  /// Seconds of immunity to obstacles/boundary death remaining after
+  /// continuing with a heart. See [continueWithHeart].
+  double _invulnerableTime = 0;
+  bool get isInvulnerable => _invulnerableTime > 0;
+
   late final Player player;
   late final LevelGenerator levelGenerator;
 
@@ -256,6 +266,8 @@ class HookItGame extends FlameGame with PanDetector {
 
     _spinLastDate = await storage.loadDailySpinLastDate();
     spinAvailableToday.value = _spinLastDate != todayKey();
+
+    heartBalance.value = await storage.loadHeartBalance();
   }
 
   /// Regenerates today's challenge if the calendar date has rolled over
@@ -341,6 +353,7 @@ class HookItGame extends FlameGame with PanDetector {
     speedBoostTimeLeft.value = 0;
     gapHintOffset.value = null;
     dailyChallengeJustCompleted.value = false;
+    _invulnerableTime = 0;
     _shakeTime = 0;
     _cameraBase.setValues(
       playerStartX + cameraLookAheadX,
@@ -477,6 +490,21 @@ class HookItGame extends FlameGame with PanDetector {
     storage.saveSelectedMap(id);
   }
 
+  /// Buys [count] hearts for [price] coins — unlike character/map
+  /// unlocks, hearts are a consumable, so this is repeatable rather than
+  /// a one-time purchase. Returns whether it succeeded (false if the
+  /// balance doesn't cover [price]).
+  bool purchaseHearts({required int count, required int price}) {
+    if (coinBalance.value < price) return false;
+
+    coinBalance.value -= price;
+    storage.saveCoinBalance(coinBalance.value);
+
+    heartBalance.value += count;
+    storage.saveHeartBalance(heartBalance.value);
+    return true;
+  }
+
   @override
   void update(double dt) {
     super.update(dt);
@@ -493,10 +521,16 @@ class HookItGame extends FlameGame with PanDetector {
     if (!isRunning) return;
 
     _runTime += dt;
+    if (_invulnerableTime > 0) {
+      _invulnerableTime = max(0, _invulnerableTime - dt);
+    }
     levelGenerator.update();
-    _checkObstacleCollisions();
+    if (!isInvulnerable) {
+      _checkObstacleCollisions();
+    }
     _checkCoinPickups();
     _checkPowerUpPickups();
+    _checkHeartPickups();
     _tickBuffs(dt);
     _updateGapHint();
     _updateDistance();
@@ -504,7 +538,8 @@ class HookItGame extends FlameGame with PanDetector {
 
     if (!isRunning) return; // a check above may have already ended the run
 
-    if (player.position.y > deathY || player.position.y < topBoundY) {
+    if (!isInvulnerable &&
+        (player.position.y > deathY || player.position.y < topBoundY)) {
       _endRun(shake: false);
     }
   }
@@ -630,6 +665,29 @@ class HookItGame extends FlameGame with PanDetector {
     }
   }
 
+  void _checkHeartPickups() {
+    for (final heart in world.children.query<Heart>().toList()) {
+      if (heart.collected) continue;
+      final dist = (heart.position - player.position).length;
+      if (dist < playerRadius + heart.radius + 4) {
+        heart.collected = true;
+        heartBalance.value += 1;
+        storage.saveHeartBalance(heartBalance.value);
+        world.add(
+          burst(
+            position: heart.position.clone(),
+            color: const Color(0xFFFF5C7A),
+            count: 14,
+            speed: 140,
+            radius: 3,
+            lifespan: 0.5,
+          ),
+        );
+        heart.removeFromParent();
+      }
+    }
+  }
+
   void _tickBuffs(double dt) {
     if (coinMultiplierTimeLeft.value > 0) {
       coinMultiplierTimeLeft.value = max(0, coinMultiplierTimeLeft.value - dt);
@@ -718,6 +776,35 @@ class HookItGame extends FlameGame with PanDetector {
     }
 
     overlays.add('gameOver');
+  }
+
+  /// Spends one heart to resume the current run right where it ended,
+  /// instead of starting over. Clears the immediate danger zone around
+  /// the player (otherwise whatever just killed them would still be
+  /// sitting right there) and grants a brief window of immunity.
+  void continueWithHeart() {
+    if (heartBalance.value <= 0) return;
+    if (status.value != GameStatus.gameOver) return;
+
+    heartBalance.value -= 1;
+    storage.saveHeartBalance(heartBalance.value);
+
+    final reviveX = player.position.x;
+    for (final obstacle in world.children.query<Obstacle>().toList()) {
+      if ((obstacle.position.x - reviveX).abs() < continueSafeZoneRadius) {
+        obstacle.removeFromParent();
+      }
+    }
+
+    player.dead = false;
+    player.position.y = (pathMinY + pathMaxY) / 2;
+    player.velocity.setValues(currentForwardSpeed, 0);
+    player.thrustingUp = false;
+    player.thrustingDown = false;
+
+    _invulnerableTime = continueInvulnerabilityDuration;
+    status.value = GameStatus.playing;
+    overlays.remove('gameOver');
   }
 
   void _completeLevel() {

@@ -175,6 +175,35 @@ class StartOverlay extends StatelessWidget {
                     ),
                     const SizedBox(width: 10),
                     ValueListenableBuilder<int>(
+                      valueListenable: game.heartBalance,
+                      builder: (context, hearts, _) => Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.28),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text('❤️', style: TextStyle(fontSize: 15)),
+                            const SizedBox(width: 6),
+                            Text(
+                              '$hearts',
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    ValueListenableBuilder<int>(
                       valueListenable: game.coinBalance,
                       builder: (context, balance, _) => Container(
                         padding: const EdgeInsets.symmetric(

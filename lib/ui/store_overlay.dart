@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
+import '../game/constants.dart';
 import '../game/daily_content.dart';
 import '../game/hook_it_game.dart';
 import '../game/store_items.dart';
@@ -20,7 +21,7 @@ class StoreOverlay extends StatefulWidget {
 }
 
 class _StoreOverlayState extends State<StoreOverlay> {
-  int _tab = 0; // 0 = characters, 1 = maps, 2 = spin
+  int _tab = 0; // 0 = characters, 1 = maps, 2 = spin, 3 = hearts
 
   @override
   Widget build(BuildContext context) {
@@ -99,7 +100,7 @@ class _StoreOverlayState extends State<StoreOverlay> {
                     children: [
                       Expanded(
                         child: _TabButton(
-                          label: 'CHARACTERS',
+                          label: 'SKINS',
                           icon: Icons.face_retouching_natural_rounded,
                           selected: _tab == 0,
                           onTap: () => setState(() => _tab = 0),
@@ -127,6 +128,15 @@ class _StoreOverlayState extends State<StoreOverlay> {
                           ),
                         ),
                       ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _TabButton(
+                          label: 'HEARTS',
+                          icon: Icons.favorite_rounded,
+                          selected: _tab == 3,
+                          onTap: () => setState(() => _tab = 3),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -134,7 +144,8 @@ class _StoreOverlayState extends State<StoreOverlay> {
                   child: switch (_tab) {
                     0 => _CharacterGrid(game: game),
                     1 => _MapGrid(game: game),
-                    _ => _SpinTab(game: game),
+                    2 => _SpinTab(game: game),
+                    _ => _HeartsTab(game: game),
                   },
                 ),
               ],
@@ -216,6 +227,8 @@ class _TabButton extends StatelessWidget {
                   const SizedBox(height: 3),
                   Text(
                     label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 0.8, color: fg),
                   ),
                 ],
@@ -1051,4 +1064,145 @@ class _PointerPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _PointerPainter oldDelegate) => false;
+}
+
+/// Buy spare lives with coins. Unlike character/map unlocks, hearts are a
+/// consumable — both offers here are repeatable rather than one-time.
+class _HeartsTab extends StatelessWidget {
+  const _HeartsTab({required this.game});
+
+  final HookItGame game;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 96,
+            height: 96,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFFFF8FA3), Color(0xFFFF5C7A)],
+              ),
+              boxShadow: [
+                BoxShadow(color: const Color(0xFFFF5C7A).withValues(alpha: 0.4), blurRadius: 22, spreadRadius: 1),
+              ],
+            ),
+            alignment: Alignment.center,
+            child: const Text('❤️', style: TextStyle(fontSize: 42)),
+          ),
+          const SizedBox(height: 14),
+          ValueListenableBuilder<int>(
+            valueListenable: game.heartBalance,
+            builder: (context, hearts, _) => Text(
+              'You have $hearts ${hearts == 1 ? "heart" : "hearts"}',
+              style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800),
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 40),
+            child: Text(
+              'Spend a heart to continue a run right where you lost it, instead of starting over.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white54, fontSize: 12, fontWeight: FontWeight.w600, height: 1.4),
+            ),
+          ),
+          const SizedBox(height: 26),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _HeartBuyTile(
+                    label: '1',
+                    price: heartPrice,
+                    onTap: () => _buy(context, 1, heartPrice),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: _HeartBuyTile(
+                    label: '$heartBundleCount',
+                    price: heartBundlePrice,
+                    highlight: true,
+                    onTap: () => _buy(context, heartBundleCount, heartBundlePrice),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _buy(BuildContext context, int count, int price) {
+    if (game.coinBalance.value < price) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Not enough coins'), duration: Duration(seconds: 2)),
+      );
+      return;
+    }
+    game.purchaseHearts(count: count, price: price);
+  }
+}
+
+class _HeartBuyTile extends StatelessWidget {
+  const _HeartBuyTile({
+    required this.label,
+    required this.price,
+    required this.onTap,
+    this.highlight = false,
+  });
+
+  final String label;
+  final int price;
+  final VoidCallback onTap;
+  final bool highlight;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: highlight ? const Color(0xFFFF5C7A).withValues(alpha: 0.18) : Colors.white.withValues(alpha: 0.08),
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: highlight ? const Color(0xFFFF5C7A) : Colors.white24, width: 1.5),
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '$label ❤️',
+                style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 6),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('🪙', style: TextStyle(fontSize: 13)),
+                  const SizedBox(width: 4),
+                  Text(
+                    '$price',
+                    style: const TextStyle(color: Color(0xFFFFD23F), fontSize: 14, fontWeight: FontWeight.w800),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

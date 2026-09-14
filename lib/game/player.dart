@@ -35,6 +35,7 @@ class Player extends PositionComponent with HasGameReference<HookItGame> {
 
   final List<Vector2> _trail = [];
   double _trailTimer = 0;
+  double _blinkTimer = 0;
 
   CharacterSkin _skin = characterSkins.first;
   late Paint _bodyPaint;
@@ -88,6 +89,8 @@ class Player extends PositionComponent with HasGameReference<HookItGame> {
     // Frozen both after death and during the pre-run countdown — the
     // player sits idle in view while "3, 2, 1" counts down.
     if (dead || !game.isRunning) return;
+
+    _blinkTimer += dt;
 
     // Rise/dive ease toward their target speed (rather than accelerating
     // linearly into a hard cap), so starting a hold, letting go, or
@@ -145,6 +148,12 @@ class Player extends PositionComponent with HasGameReference<HookItGame> {
 
   @override
   void render(Canvas canvas) {
+    // Flashes on/off while a post-continue immunity window is active, so
+    // it's visually obvious the player can't be hit right now.
+    if (game.isInvulnerable && (_blinkTimer * 8).floor().isOdd) {
+      return;
+    }
+
     // Speed lines when moving fast (drawn behind the body, in local space).
     final speed = velocity.length;
     if (speed > 620) {

@@ -4,6 +4,7 @@ import 'package:flame/components.dart';
 
 import 'coin.dart';
 import 'constants.dart';
+import 'heart.dart';
 import 'hook_it_game.dart';
 import 'obstacle.dart';
 import 'power_up.dart';
@@ -26,11 +27,6 @@ class LevelGenerator {
   double _nextSpawnX = 0;
   double _lastY = playerStartY;
   int _chunkIndex = 0;
-
-  // Vertical bounds the path/hazards are kept within, tuned for the
-  // 450x975 viewport.
-  static const double _minY = 195;
-  static const double _maxY = 683;
 
   void reset() {
     _nextSpawnX = playerStartX + 260;
@@ -60,7 +56,7 @@ class LevelGenerator {
     final endX = startX + width;
     final newY = easyStart
         ? _lastY
-        : (_lastY + (_rng.nextDouble() - 0.5) * 300).clamp(_minY, _maxY);
+        : (_lastY + (_rng.nextDouble() - 0.5) * 300).clamp(pathMinY, pathMaxY);
 
     _spawnCoinArc(startX, _lastY, endX, newY, 4);
 
@@ -70,6 +66,7 @@ class LevelGenerator {
         _spawnObstacle(startX, endX, _lastY, newY, difficulty);
       }
       _maybeSpawnPowerUp(startX, _lastY, endX, newY);
+      _maybeSpawnHeart(startX, _lastY, endX, newY);
     }
 
     _lastY = newY;
@@ -86,6 +83,16 @@ class LevelGenerator {
     final y = startY + (endY - startY) * t - sin(t * pi) * 55;
     final kind = _rng.nextBool() ? PowerUpKind.coinMultiplier : PowerUpKind.speedBoost;
     game.world.add(PowerUp(position: Vector2(x, y), kind: kind));
+  }
+
+  /// Even more rarely drops a heart — offset to a different point along
+  /// the arc than the power-up spot so the two never overlap.
+  void _maybeSpawnHeart(double startX, double startY, double endX, double endY) {
+    if (_rng.nextDouble() > heartChance) return;
+    const t = 0.25;
+    final x = startX + (endX - startX) * t;
+    final y = startY + (endY - startY) * t - sin(t * pi) * 55;
+    game.world.add(Heart(position: Vector2(x, y)));
   }
 
   void _spawnCoinArc(double startX, double startY, double endX, double endY, int count) {
@@ -125,12 +132,12 @@ class LevelGenerator {
         // Sits just off the coin path — the player has to nudge up or
         // down to avoid it.
         final side = _rng.nextBool() ? 1 : -1;
-        final spikeY = (pathY + side * 90).clamp(_minY, _maxY);
+        final spikeY = (pathY + side * 90).clamp(pathMinY, pathMaxY);
         game.world.add(SpikeObstacle(position: Vector2(midX, spikeY)));
 
       case _Pattern.wallGap:
         final gapHeight = 260.0;
-        final gapY = (pathY - gapHeight / 2).clamp(_minY - 60, _maxY - gapHeight + 60);
+        final gapY = (pathY - gapHeight / 2).clamp(pathMinY - 60, pathMaxY - gapHeight + 60);
         game.world.add(
           WallObstacle(position: Vector2(midX, 0), gapY: gapY, gapHeight: gapHeight),
         );
@@ -138,7 +145,7 @@ class LevelGenerator {
       case _Pattern.narrowGap:
         // A tighter thread-the-needle gap for later, harder stretches.
         final gapHeight = 195.0;
-        final gapY = (pathY - gapHeight / 2).clamp(_minY - 60, _maxY - gapHeight + 60);
+        final gapY = (pathY - gapHeight / 2).clamp(pathMinY - 60, pathMaxY - gapHeight + 60);
         game.world.add(
           WallObstacle(position: Vector2(midX, 0), gapY: gapY, gapHeight: gapHeight),
         );
@@ -147,8 +154,8 @@ class LevelGenerator {
         // Spikes above and below the path — thread cleanly through the
         // middle rather than just nudging past one side.
         final gap = 170.0;
-        game.world.add(SpikeObstacle(position: Vector2(midX, (pathY - gap / 2).clamp(_minY, _maxY))));
-        game.world.add(SpikeObstacle(position: Vector2(midX, (pathY + gap / 2).clamp(_minY, _maxY))));
+        game.world.add(SpikeObstacle(position: Vector2(midX, (pathY - gap / 2).clamp(pathMinY, pathMaxY))));
+        game.world.add(SpikeObstacle(position: Vector2(midX, (pathY + gap / 2).clamp(pathMinY, pathMaxY))));
 
       case _Pattern.moving:
         game.world.add(

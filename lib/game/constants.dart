@@ -78,6 +78,12 @@ const double spawnAheadDistance = 950;
 const double minChunkWidth = 360;
 const double maxChunkWidth = 620;
 
+/// Vertical bounds the path/hazards are kept within, tuned for the
+/// 450x975 viewport. Also used to pick a safe respawn height when
+/// continuing a run with a heart (see [HookItGame.continueWithHeart]).
+const double pathMinY = 195;
+const double pathMaxY = 683;
+
 /// Meters per "level" — crossing a multiple of this shows a LEVEL UP
 /// banner and nudges the background palette, so a long run visibly
 /// progresses through distinct stages rather than staying flat.
@@ -123,3 +129,27 @@ const double speedBoostDuration = 4.0;
 
 /// Forward-speed multiplier while a speed boost is active.
 const double speedBoostFactor = 1.6;
+
+// --- Hearts ---------------------------------------------------------------
+
+/// Chance, per generated chunk (past the easy opening), that a heart
+/// spawns in it. Kept rarer than power-ups — a spare life is worth more
+/// than a temporary buff.
+const double heartChance = 0.035;
+
+/// Coin price for a single heart in the Store.
+const int heartPrice = 100;
+
+/// Coin price for a 5-heart bundle — a modest discount over buying one
+/// at a time.
+const int heartBundlePrice = 450;
+const int heartBundleCount = 5;
+
+/// How many world-px around the player are cleared of obstacles when
+/// continuing with a heart — otherwise whatever just killed them would
+/// still be sitting right there.
+const double continueSafeZoneRadius = 420;
+
+/// How long the player is immune to obstacles/boundary death right after
+/// continuing with a heart, giving them a beat to get their bearings.
+const double continueInvulnerabilityDuration = 2.0;
